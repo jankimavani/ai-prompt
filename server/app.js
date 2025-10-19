@@ -41,9 +41,27 @@ async function callOpenAIKey(prompt) {
   );
   return apiresponse.data?.choices?.[0]?.message?.content ?? "";
 }
-function getProvider() {
-  return AI_PROVIDER === callOpenAIKey;
+
+// Optional HF provider - i did the code for checking if anything happen with open ai then i will try HF
+async function hfGenerate(prompt) {
+  const apiresponse = await axios.post(
+    "https://api-inference.huggingface.co/models/bigscience/bloom",
+    { inputs: prompt },
+    {
+      headers: { Authorization: `Bearer ${AI_API_KEY}` },
+      timeout: AI_TIMEOUT_MS,
+    }
+  );
+  const data = apiresponse.data;
+  if (Array.isArray(data)) return data[0]?.generated_text ?? "";
+  return data?.generated_text ?? "";
 }
+
+// ✅ Must return a FUNCTION
+function getProvider() {
+  return AI_PROVIDER === "hf" ? hfGenerate : callOpenAIKey;
+}
+
 // health check
 app.get("/health", (_req, apiresponse) => apiresponse.json({ ok: true }));
 
