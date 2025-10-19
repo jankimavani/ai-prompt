@@ -24,3 +24,59 @@ app.use("/api/ai", limiter);
 
 // Validation schema
 const chatReq = z.object({ prompt: z.string().min(1).max(4000) });
+
+// OpenAI provider
+async function callOpenAIKey(prompt) {
+  const apiresponse = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      model: AI_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+    },
+    {
+      headers: { Authorization: `Bearer ${AI_API_KEY}` },
+      timeout: AI_TIMEOUT_MS,
+    }
+  );
+  return apiresponse.data?.choices?.[0]?.message?.content ?? "";
+}
+function getProvider() {
+  return AI_PROVIDER === callOpenAIKey;
+}
+// health check
+app.get("/health", (_req, apiresponse) => apiresponse.json({ ok: true }));
+
+// Routes
+app.post("/api/ai", async (req, apiresponse) => {
+  try {
+    if (!AI_API_KEY) {
+      return apiresponse.status(500).json({
+        error: {
+          code: "NO_API_KEY",
+          message: "AI_API_KEY is not set. Please check the key.",
+        },
+      });
+    }
+
+    const parsed = chatReq.safeParse(req.body);
+    if (!parsed.success) {
+      return apiresponse.status(400).json({
+        error: { code: "BAD_REQUEST", message: parsed.error.message },
+      });
+    }
+
+    const generate = getProvider(); // will return callOpenAIKey for 'openai'
+    const content = await generate(parsed.data.prompt);
+
+    return apiresponse.json({ message: { role: "assistant", content } });
+  } catch (err) {
+    const status = err?.response?.status || 500;
+    const details = err?.response?.data || err.message || "Internal error";
+    return apiresponse
+      .status(status)
+      .json({ error: { code: "AI_UPSTREAM_ERROR", message: details } });
+  }
+});
+
+module.exports = { app, PORT };
