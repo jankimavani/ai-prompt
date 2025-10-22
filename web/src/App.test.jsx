@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "./App";
 
-// Mock API call (so it doesn't hit your real backend)
+// Mock API call
 beforeAll(() => {
   global.fetch = vi.fn(async () => ({
     ok: true,
