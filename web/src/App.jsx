@@ -1,20 +1,34 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { generateReply } from "./api";
+import "./App.css";
 
 export default function App() {
   const [prompt, setPrompt] = useState("");
-  const [history, setHistory] = useState([]); // {role, content}[]
+  const [history, setHistory] = useState([]); // { role: "user"|"assistant", content: string }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const listRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    // auto-scroll to the latest message
+    listRef.current?.lastElementChild?.scrollIntoView({ behavior: "smooth" });
+  }, [history, loading]);
 
   async function onSubmit(e) {
     e.preventDefault();
     const q = prompt.trim();
-    if (!q) return;
+    if (!q || loading) return;
+
     setError(null);
     setLoading(true);
     setHistory((h) => [...h, { role: "user", content: q }]);
     setPrompt("");
+
     try {
       const reply = await generateReply(q);
       setHistory((h) => [...h, { role: "assistant", content: reply }]);
@@ -26,64 +40,112 @@ export default function App() {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 720,
-        margin: "0 auto",
-        padding: 16,
-        fontFamily: "system-ui, Arial",
-      }}
-    >
-      <h1 style={{ textAlign: "center", marginBottom: 16 }}>AI Prompt </h1>
+    <div className="site">
+      {/* Header */}
+      <header className="siteHeader">
+        <div className="brand">AI Prompt</div>
+      </header>
 
-      <form
-        onSubmit={onSubmit}
-        style={{ display: "flex", gap: 8, marginBottom: 12 }}
-      >
-        <input
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Ask something..."
-          style={{
-            flex: 1,
-            padding: "8px 12px",
-            border: "1px solid #ccc",
-            borderRadius: 6,
-          }}
-        />
-        <button
-          disabled={loading}
-          style={{ padding: "8px 16px", borderRadius: 6 }}
-        >
-          {loading ? "..." : "Send"}
-        </button>
-      </form>
+      {/* Main content */}
+      <main className="siteMain">
+        {history.length === 0 ? (
+          // Hero state (centered prompt on a clean page)
+          <section className="hero">
+            <h1 className="heroTitle">Ask anything</h1>
+            <p className="heroSubtitle">
+              Type a prompt and hit Send to get an instant AI reply.
+            </p>
 
-      {error && (
-        <div style={{ color: "#b00020", marginBottom: 8 }}>Error: {error}</div>
-      )}
-
-      <div style={{ display: "grid", gap: 8 }}>
-        {history.map((m, i) => (
-          <div
-            key={i}
-            style={{ textAlign: m.role === "user" ? "right" : "left" }}
-          >
-            <div
-              style={{
-                display: "inline-block",
-                padding: "8px 12px",
-                borderRadius: 8,
-                border: "1px solid #eee",
-                background: m.role === "user" ? "#f5f5f5" : "#fff",
-              }}
+            <form
+              onSubmit={onSubmit}
+              className="heroForm"
+              aria-label="prompt form"
             >
-              <strong>{m.role === "user" ? "You" : "AI"}: </strong>
-              <span>{m.content}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+              <input
+                ref={inputRef}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="e.g., Summarize the benefits of TypeScript in 3 bullet points"
+                className="heroInput"
+                aria-label="Prompt"
+              />
+              <button
+                className={`heroBtn ${loading ? "is-loading" : ""}`}
+                disabled={loading || !prompt.trim()}
+                aria-busy={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner" aria-hidden="true" />
+                    <span>Sending…</span>
+                  </>
+                ) : (
+                  "Send"
+                )}
+              </button>
+            </form>
+
+            {error && <div className="error">{error}</div>}
+          </section>
+        ) : (
+          // Chat state (history + bottom input)
+          <>
+            <section className="chat" ref={listRef} aria-live="polite">
+              {history.map((m, i) => (
+                <div
+                  key={i}
+                  className={`bubble ${
+                    m.role === "user" ? "bubbleUser" : "bubbleAI"
+                  }`}
+                >
+                  <span className="bubbleRole">
+                    {m.role === "user" ? "You" : "AI"}
+                  </span>
+                  <div className="bubbleText">{m.content}</div>
+                </div>
+              ))}
+              {loading && (
+                <div className="bubble bubbleAI skeleton">
+                  <div className="skeletonLine" />
+                  <div className="skeletonLine short" />
+                </div>
+              )}
+            </section>
+
+            <form onSubmit={onSubmit} className="dock" aria-label="prompt form">
+              <input
+                ref={inputRef}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Type your next prompt…"
+                className="dockInput"
+                aria-label="Prompt"
+              />
+              <button
+                className={`dockBtn ${loading ? "is-loading" : ""}`}
+                disabled={loading || !prompt.trim()}
+                aria-busy={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner" aria-hidden="true" />
+                    <span>Sending…</span>
+                  </>
+                ) : (
+                  "Send"
+                )}
+              </button>
+            </form>
+
+            {error && <div className="error floatingError">{error}</div>}
+          </>
+        )}
+      </main>
+
+      {/* Footer (optional) */}
+      <footer className="siteFooter">
+        <span>© {new Date().getFullYear()} AI Prompt</span>
+      </footer>
     </div>
   );
 }
