@@ -27,3 +27,8 @@ A full-stack AI-integrated web app built with React + Node.js + OpenAI API.
 # Test
 
 - Testing: Vitest, Testing Library
+
+# ⚙️ Environment Setup
+
+1. Duplicate `.env.example` → rename to `.env`
+2. Add your real OpenAI API key:

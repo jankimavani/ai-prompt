@@ -1,0 +1,8 @@
+# Example environment file
+
+AI_PROVIDER=openai
+AI_API_KEY=sk-your-api-key
+AI_MODEL=gpt-4o-mini
+CORS_ORIGIN=http://localhost:5173
+PORT=8787
+AI_TIMEOUT_MS=45000
